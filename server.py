@@ -28,6 +28,38 @@ def init_db():
 init_db()
 
 # =========================
+# HOME PAGE
+# =========================
+@app.route("/")
+def home():
+    return "API ONLINE"
+
+# =========================
+# CREATE TEST KEY
+# =========================
+@app.route("/addtest")
+def addtest():
+
+    conn = sqlite3.connect(DB_NAME)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+    INSERT OR REPLACE INTO licenses
+    (license_key, active, expires, hwid)
+    VALUES (?, ?, ?, ?)
+    """, (
+        "TEST123",
+        1,
+        "2027-01-01",
+        None
+    ))
+
+    conn.commit()
+    conn.close()
+
+    return "TEST KEY CREATED"
+
+# =========================
 # VERIFY LICENSE
 # =========================
 @app.route("/verify", methods=["POST"])
@@ -49,24 +81,20 @@ def verify():
 
     result = cursor.fetchone()
 
-    # KEY NOT FOUND
     if not result:
         conn.close()
         return jsonify({"status": "invalid"})
 
     active, expires, saved_hwid = result
 
-    # DISABLED
     if active == 0:
         conn.close()
         return jsonify({"status": "disabled"})
 
-    # EXPIRED
     if datetime.now() > datetime.fromisoformat(expires):
         conn.close()
         return jsonify({"status": "expired"})
 
-    # HWID CHECK
     if saved_hwid is None:
 
         cursor.execute("""
@@ -86,6 +114,7 @@ def verify():
     return jsonify({"status": "valid"})
 
 # =========================
-# START SERVER
+# RUN
 # =========================
-app.run(host="0.0.0.0", port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
